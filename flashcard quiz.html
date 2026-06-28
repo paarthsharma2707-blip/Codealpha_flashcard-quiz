@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flashcard Quiz App</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface-hover: #f9f8f6;
+      --border: rgba(0,0,0,0.1);
+      --border-strong: rgba(0,0,0,0.18);
+      --text: #1a1a18;
+      --text-secondary: #6b6b67;
+      --text-muted: #a0a09c;
+      --accent: #3b6ef5;
+      --accent-bg: #eef2fe;
+      --accent-border: rgba(59,110,245,0.25);
+      --accent-text: #2451d4;
+      --danger: #dc3545;
+      --danger-bg: #fff0f0;
+      --danger-border: rgba(220,53,69,0.25);
+      --danger-text: #b02030;
+      --success-bg: #edfaf4;
+      --success-text: #1a7a50;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #18181a;
+        --surface: #232326;
+        --surface-hover: #2a2a2e;
+        --border: rgba(255,255,255,0.09);
+        --border-strong: rgba(255,255,255,0.15);
+        --text: #f0efec;
+        --text-secondary: #9b9b97;
+        --text-muted: #65655f;
+        --accent: #5a8cff;
+        --accent-bg: #1a2240;
+        --accent-border: rgba(90,140,255,0.3);
+        --accent-text: #7aa8ff;
+        --danger: #ff6b7a;
+        --danger-bg: #2a1418;
+        --danger-border: rgba(255,107,122,0.25);
+        --danger-text: #ff8a96;
+        --success-bg: #0d2318;
+        --success-text: #5ecb94;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    .app-title { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+    .app-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+    .btn-add {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      box-shadow: var(--shadow);
+    }
+    .btn-add:hover { background: var(--surface-hover); }
+
+    /* Progress */
+    .progress-wrap { margin-bottom: 1.75rem; }
+    .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .progress-label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+    .progress-pct { font-size: 12px; font-weight: 500; color: var(--accent-text); }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Card */
+    .card-stage { perspective: 1100px; height: 260px; margin-bottom: 1.25rem; cursor: pointer; }
+    .card-inner {
+      position: relative; width: 100%; height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+      transform-style: preserve-3d;
+    }
+    .card-stage.flipped .card-inner { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute; inset: 0;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      user-select: none;
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+      background: var(--accent-bg);
+      border-color: var(--accent-border);
+    }
+
+    .card-tag {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-muted); margin-bottom: 1rem;
+    }
+    .card-back .card-tag { color: var(--accent-text); opacity: 0.7; }
+
+    .card-body {
+      font-size: 20px; font-weight: 500; line-height: 1.55;
+      text-align: center; color: var(--text);
+    }
+    .card-back .card-body { color: var(--accent-text); }
+
+    .card-tip {
+      position: absolute; bottom: 16px;
+      font-size: 12px; color: var(--text-muted);
+    }
+
+    /* Show Answer btn */
+    .btn-show {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--accent-border);
+      background: var(--accent-bg);
+      color: var(--accent-text);
+      font-size: 14px; font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 1.25rem;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .btn-show:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-show.revealed {
+      background: var(--success-bg); color: var(--success-text);
+      border-color: rgba(26,122,80,0.2);
+      cursor: default;
+    }
+
+    /* Nav */
+    .nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 2.5rem; }
+    .btn-nav {
+      flex: 1; padding: 10px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px; font-weight: 500;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.15s;
+      box-shadow: var(--shadow);
+    }
+    .btn-nav:hover:not(:disabled) { background: var(--surface-hover); }
+    .btn-nav:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+    .nav-counter { font-size: 13px; color: var(--text-muted); min-width: 52px; text-align: center; flex-shrink: 0; }
+
+    /* Divider */
+    .divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
+
+    /* Card list */
+    .section-label {
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .card-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .card-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s;
+    }
+    .card-row:hover { border-color: var(--border-strong); }
+    .card-row.active { border-color: var(--accent-border); background: var(--accent-bg); }
+
+    .card-row-num {
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      min-width: 24px; text-align: center;
+    }
+    .card-row.active .card-row-num { color: var(--accent-text); }
+
+    .card-row-text { flex: 1; min-width: 0; }
+    .card-row-q { font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-row-a { font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .card-row-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+    .icon-btn {
+      width: 30px; height: 30px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      font-size: 15px;
+    }
+    .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
+    .icon-btn.danger:hover {
+      background: var(--danger-bg); color: var(--danger-text);
+      border-color: var(--danger-border);
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--text-muted); font-size: 15px;
+    }
+    .empty i { font-size: 44px; display: block; margin-bottom: 14px; opacity: 0.4; }
+
+    /* Modal */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 1rem;
+      backdrop-filter: blur(2px);
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      padding: 1.75rem;
+      width: 100%; max-width: 440px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .modal h3 { font-size: 17px; font-weight: 600; margin-bottom: 1.25rem; }
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+    .field textarea {
+      width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 10px 12px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; }
+    .btn-cancel {
+      padding: 9px 18px; border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      background: transparent; color: var(--text-secondary);
+      font-size: 14px; cursor: pointer;
+    }
+    .btn-cancel:hover { background: var(--surface-hover); }
+    .btn-save {
+      padding: 9px 20px; border-radius: var(--radius);
+      border: 1px solid var(--accent);
+      background: var(--accent); color: #fff;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-save:hover { opacity: 0.88; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--text); color: var(--bg);
+      font-size: 13px; font-weight: 500;
+      padding: 10px 18px; border-radius: 99px;
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; white-space: nowrap; z-index: 300;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 480px) {
+      .card-body { font-size: 17px; }
+      .app-title { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="app-title">Flashcard Quiz</div>
+      <div class="app-subtitle" id="subtitle">5 cards in your deck</div>
+    </div>
+    <button class="btn-add" onclick="openAdd()">
+      <i class="ti ti-plus"></i> Add card
+    </button>
+  </header>
+
+  <div id="study-area"></div>
+  <div class="divider"></div>
+  <div class="section-label">All cards</div>
+  <div class="card-list" id="card-list"></div>
+</div>
+
+<div class="modal-bg" id="modal" style="display:none" onclick="handleModalBgClick(event)">
+  <div class="modal">
+    <h3 id="modal-title">Add a new card</h3>
+    <div class="field">
+      <label for="fq">Question</label>
+      <textarea id="fq" rows="3" placeholder="What do you want to remember?"></textarea>
+    </div>
+    <div class="field">
+      <label for="fa">Answer</label>
+      <textarea id="fa" rows="3" placeholder="The answer to the question"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="modal-save-btn" onclick="saveCard()">Add card</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let cards = [
+    { id: 1, q: "What is the powerhouse of the cell?", a: "The mitochondria" },
+    { id: 2, q: "What is Newton's second law of motion?", a: "Force equals mass times acceleration (F = ma)" },
+    { id: 3, q: "Who wrote 'To Kill a Mockingbird'?", a: "Harper Lee" },
+    { id: 4, q: "What is the speed of light in a vacuum?", a: "Approximately 299,792,458 m/s (3 × 10⁸ m/s)" },
+    { id: 5, q: "What does HTML stand for?", a: "HyperText Markup Language" },
+  ];
+
+  let current = 0;
+  let flipped = false;
+  let editId = null;
+  let nextId = 6;
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2000);
+  }
+
+  function renderStudy() {
+    const area = document.getElementById("study-area");
+    const subtitle = document.getElementById("subtitle");
+    subtitle.textContent = `${cards.length} card${cards.length !== 1 ? "s" : ""} in your deck`;
+
+    if (cards.length === 0) {
+      area.innerHTML = `<div class="empty"><i class="ti ti-cards"></i>No cards yet — add one to get started.</div>`;
+      return;
+    }
+
+    const card = cards[current];
+    const pct = Math.round(((current + 1) / cards.length) * 100);
+
+    area.innerHTML = `
+      <div class="progress-wrap">
+        <div class="progress-meta">
+          <span class="progress-label">Progress</span>
+          <span class="progress-pct">${current + 1} of ${cards.length}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+
+      <div class="card-stage${flipped ? " flipped" : ""}" id="card-stage" onclick="flipCard()" role="button" tabindex="0" aria-label="Flashcard — click to flip">
+        <div class="card-inner">
+          <div class="card-face">
+            <div class="card-tag">Question</div>
+            <div class="card-body">${esc(card.q)}</div>
+            <div class="card-tip">click to reveal answer</div>
+          </div>
+          <div class="card-face card-back">
+            <div class="card-tag">Answer</div>
+            <div class="card-body">${esc(card.a)}</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-show${flipped ? " revealed" : ""}" onclick="showAnswer()">
+        ${flipped
+          ? '<i class="ti ti-check"></i> Answer revealed'
+          : '<i class="ti ti-eye"></i> Show answer'}
+      </button>
+
+      <div class="nav-row">
+        <button class="btn-nav" onclick="go(-1)" ${current === 0 ? "disabled" : ""}>
+          <i class="ti ti-arrow-left"></i> Previous
+        </button>
+        <span class="nav-counter">${current + 1} / ${cards.length}</span>
+        <button class="btn-nav" onclick="go(1)" ${current === cards.length - 1 ? "disabled" : ""}>
+          Next <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>`;
+
+    const stage = document.getElementById("card-stage");
+    if (stage) {
+      stage.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flipCard(); }
+      });
+    }
+  }
+
+  function renderList() {
+    const list = document.getElementById("card-list");
+    if (cards.length === 0) {
+      list.innerHTML = `<p style="font-size:13px;color:var(--text-muted);padding:4px 0">No cards yet.</p>`;
+      return;
+    }
+    list.innerHTML = cards.map((c, i) => `
+      <div class="card-row${i === current ? " active" : ""}">
+        <div class="card-row-num">${i + 1}</div>
+        <div class="card-row-text">
+          <div class="card-row-q">${esc(c.q)}</div>
+          <div class="card-row-a">${esc(c.a)}</div>
+        </div>
+        <div class="card-row-actions">
+          <button class="icon-btn" onclick="jumpTo(${i})" aria-label="Study card ${i+1}"><i class="ti ti-player-play"></i></button>
+          <button class="icon-btn" onclick="openEdit(${c.id})" aria-label="Edit card"><i class="ti ti-edit"></i></button>
+          <button class="icon-btn danger" onclick="deleteCard(${c.id})" aria-label="Delete card"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`).join("");
+  }
+
+  function render() { renderStudy(); renderList(); }
+
+  function flipCard() { flipped = !flipped; render(); }
+  function showAnswer() { if (!flipped) { flipped = true; render(); } }
+  function go(dir) {
+    current = Math.min(Math.max(current + dir, 0), cards.length - 1);
+    flipped = false; render();
+  }
+  function jumpTo(i) { current = i; flipped = false; render(); }
+
+  function openAdd() {
+    editId = null;
+    document.getElementById("modal-title").textContent = "Add a new card";
+    document.getElementById("modal-save-btn").textContent = "Add card";
+    document.getElementById("fq").value = "";
+    document.getElementById("fa").value = "";
+    document.getElementById("modal").style.display = "flex";
+    document.getElementById("fq").focus();
+  }
+
+  function openEdit(id) {
+    const c = cards.find(x => x.id === id);
+    editId = id;
+    document.getElementById("modal-title").textContent = "Edit card";
+    document.getElementById("modal-save-btn").textContent = "Save changes";
+    document.getElementById("fq").value = c.q;
+    document.getElementById("fa").value = c.a;
+    document.getElementById("modal").style.display = "flex";
+    document.getElementById("fq").focus();
+  }
+
+  function closeModal() { document.getElementById("modal").style.display = "none"; }
+
+  function handleModalBgClick(e) { if (e.target === document.getElementById("modal")) closeModal(); }
+
+  function saveCard() {
+    const q = document.getElementById("fq").value.trim();
+    const a = document.getElementById("fa").value.trim();
+    if (!q || !a) { showToast("Please fill in both fields."); return; }
+    if (editId !== null) {
+      cards = cards.map(c => c.id === editId ? { ...c, q, a } : c);
+      showToast("Card updated.");
+    } else {
+      cards.push({ id: nextId++, q, a });
+      current = cards.length - 1;
+      flipped = false;
+      showToast("Card added.");
+    }
+    closeModal(); render();
+  }
+
+  function deleteCard(id) {
+    if (!confirm("Delete this card?")) return;
+    cards = cards.filter(c => c.id !== id);
+    if (current >= cards.length) current = Math.max(0, cards.length - 1);
+    flipped = false; render();
+    showToast("Card deleted.");
+  }
+
+  document.addEventListener("keydown", e => {
+    if (document.getElementById("modal").style.display !== "none") {
+      if (e.key === "Escape") closeModal();
+      return;
+    }
+    if (e.key === "ArrowRight") go(1);
+    if (e.key === "ArrowLeft") go(-1);
+    if (e.key === " ") { e.preventDefault(); flipCard(); }
+  });
+
+  render();
+</script>
+</body>
+</html>
